@@ -18,9 +18,6 @@ public class EmailService {
     private final static Logger LOGGER = LoggerFactory.getLogger(EmailService.class);
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
-
     @Async
     public void send(String to, String subject, String emailContent) {
         try {
@@ -30,7 +27,7 @@ public class EmailService {
             helper.setText(emailContent, true);
             helper.setTo(to);
             helper.setSubject(subject);
-            helper.setFrom(fromEmail);
+            helper.setFrom("denis.starchenko.26@gmail.com");
 
             mailSender.send(mimeMessage);
             LOGGER.info("Email sent to {}", to);
