@@ -2,9 +2,9 @@
 
 **ElHelper** is a comprehensive backend platform designed for electronics engineers. It combines a specialized **Knowledge Base (Wiki)**, an **Engineering Calculator** with formula management, and a **Project Management System** capable of versioning and BOM (Bill of Materials) generation.
 
-![Java](https://img.shields.io/badge/Java-17%2B-orange)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-green)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)
+![Java](https://img.shields.io/badge/Java-21%2B-orange)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.x-green)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-blue)
 ![Security](https://img.shields.io/badge/Security-OAuth2_%26_JWT-red)
 ![Deploy](https://img.shields.io/badge/Deploy-Render-black)
 
