@@ -12,6 +12,7 @@ import java.time.Instant;
 @Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 public class AdminRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
