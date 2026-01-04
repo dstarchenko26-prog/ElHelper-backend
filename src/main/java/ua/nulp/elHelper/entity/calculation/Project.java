@@ -3,6 +3,7 @@ package ua.nulp.elHelper.entity.calculation;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import ua.nulp.elHelper.entity.user.User;
 
 import java.time.Instant;
@@ -14,6 +15,7 @@ import java.util.List;
 @Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 @Builder // Додає зручний патерн "Builder" для створення об'єктів
 public class Project {
 
