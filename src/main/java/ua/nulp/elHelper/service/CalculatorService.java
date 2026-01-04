@@ -47,6 +47,13 @@ public class CalculatorService {
         );
     }
 
+    public CalculationResponse getById(Long id) {
+        var calc = calculationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Calculation not found"));
+        
+        return mapToDto(calc);
+    }
+
     @Transactional
     public CalculationResponse calculateAndSave(CalculationRequest request, String userEmail) {
         var project = projectRepository.findByIdAndUserEmail(request.getProjectId(), userEmail)
