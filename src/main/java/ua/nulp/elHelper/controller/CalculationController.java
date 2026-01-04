@@ -28,6 +28,11 @@ public class CalculationController {
         return ResponseEntity.ok(calculatorService.calculateAndSave(request, authentication.getName()));
     }
 
+    @GetMapping("/calc/{calcId}")
+    public ResponseEntity<CalculationResponse> getCalc(@PathVariable Long calcId) {
+        return ResponseEntity.ok(calculatorService.getById(calcId));
+    }
+
     @GetMapping("{projectId}")
     public ResponseEntity<List<CalculationResponse>> getByProject(Authentication authentication, @PathVariable Long projectId) {
         return ResponseEntity.ok(calculatorService.getProjectCalculations(projectId, authentication.getName()));
