@@ -9,6 +9,8 @@ import java.util.Optional;
 
 @Repository
 public interface CalculationRepo extends JpaRepository<Calculation, Long> {
+    Optional<Calculation> findById(Long id);
+    
     List<Calculation> findAllByProjectId(Long projectId);
 
     Optional<Calculation> findByIdAndProject_User_Email(Long id, String email);
