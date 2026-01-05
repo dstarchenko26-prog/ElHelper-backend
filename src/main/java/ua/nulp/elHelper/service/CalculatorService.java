@@ -366,21 +366,19 @@ private Map<String, Double> runAutoSolver(Formula formula, Map<String, Double> i
         progress = false;
         for (Formula.FormulaScript script : formula.getScripts()) {
 
-            // 1. Отримуємо оригінальне рівняння: "#I = #U / #R"
+            // 1. Отримуємо оригінальне рівняння
             String rawEquation = script.getExpression();
             if (!rawEquation.contains("=")) {
                 rawEquation = "#" + script.getTarget() + " = " + rawEquation;
             }
 
-            // 2. Отримуємо змінні вашим методом: ["I", "U", "R"] (вже без решіток)
+            // 2. Отримуємо змінні: ["I", "U", "R", "Output_Power"]
             List<String> rawVars = extractVariables(rawEquation);
 
-            // 3. Шукаємо невідому
             String missingVarClean = null;
             int missingCount = 0;
 
             for (String v : rawVars) {
-                // Перевіряємо наявність значення під ключем "#Variable" (як у базі) або просто "Variable"
                 if (!context.containsKey("#" + v) && !context.containsKey(v)) {
                     missingVarClean = v;
                     missingCount++;
@@ -389,37 +387,36 @@ private Map<String, Double> runAutoSolver(Formula formula, Map<String, Double> i
 
             if (missingCount == 1) {
                 try {
-                    // === СТВОРЮЄМО БЕЗПЕЧНЕ РІВНЯННЯ ===
-
                     String safeEquation = rawEquation;
                     Map<String, Double> safeInputs = new HashMap<>();
-                    String safeTarget = "var_" + missingVarClean;
 
-                    // Сортуємо за довжиною, щоб заміна була коректною (довгі імена перші)
+                    // Генеруємо безпечне ім'я для шуканої змінної (БЕЗ ПІДКРЕСЛЕНЬ!)
+                    // Output_Power -> vOutputPower
+                    String safeTarget = "v" + missingVarClean.replace("_", "");
+
+                    // Сортуємо: довгі імена перші
                     rawVars.sort((s1, s2) -> s2.length() - s1.length());
 
                     for (String v : rawVars) {
-                        // Токен як він є у формулі (з решіткою)
                         String token = "#" + v;
-                        // Безпечне ім'я
-                        String safeName = "var_" + v;
 
-                        // ЗАМІНА: Міняємо "#I" на "var_I".
-                        // Це НЕ зачепить "sin", "sqrt" або числа.
+                        // 🔥 КРИТИЧНИЙ ФІКС: Видаляємо "_" з імені змінної і додаємо префікс "v"
+                        // Symja не дозволяє "_" у назвах змінних!
+                        String safeName = "v" + v.replace("_", "");
+
+                        // Заміна в рівнянні
                         safeEquation = safeEquation.replace(token, safeName);
 
-                        // Підготовка значень
-                        Double val = context.get(token); // пробуємо взяти по ключу #I
-                        if (val == null) val = context.get(v); // якщо ні, по ключу I
+                        // Значення
+                        Double val = context.get(token);
+                        if (val == null) val = context.get(v);
 
                         if (val != null) {
                             safeInputs.put(safeName, val);
                         }
                     }
 
-                    // Тепер safeEquation виглядає як "var_I = var_U / var_R"
-                    // Всі конфлікти з Symja (I, E, D) усунені префіксом var_
-
+                    // Виклик солвера
                     Double res = symbolicSolver.solve(safeEquation, safeInputs, safeTarget);
 
                     if (res != null) {
@@ -428,7 +425,7 @@ private Map<String, Double> runAutoSolver(Formula formula, Map<String, Double> i
                     }
 
                 } catch (Exception e) {
-                    System.err.println("AutoSolver failed on: " + rawEquation);
+                    System.err.println("AutoSolver failed: " + e.getMessage());
                 }
             }
         }
