@@ -14,69 +14,69 @@ public class SymbolicSolverService {
     private final ExprEvaluator evaluator = new ExprEvaluator();
 
     /**
-     * Вирішує рівняння відносно заданої змінної.
-     *
-     * @param equation  Рівняння, наприклад "#I = #U / #R"
-     * @param inputs    Відомі значення, наприклад {"U": 12.0, "I": 2.0}
-     * @param targetVar Змінна, яку треба знайти, наприклад "R"
-     * @return Знайдене значення (Double) або null, якщо розв'язку немає
+     * Вирішує рівняння безпечно, уникаючи конфліктів із зарезервованими іменами Symja (I, E, Pi).
      */
     public Double solve(String equation, Map<String, Double> inputs, String targetVar) {
         try {
-            // 1. Очистка синтаксису:
-            // - Видаляємо SpEL-маркери "#"
-            // - Замінюємо "=" на "==" (синтаксис рівності в Symja/Mathematica)
-            String preparedEq = equation.replace("#", "").replace("=", "==");
+            // 1. Прибираємо всі # з вхідних даних для чистоти
+            String cleanEq = equation.replace("#", "");
+            String cleanTarget = targetVar.replace("#", "");
 
-            // 2. Підстановка відомих значень у стрічку рівняння
-            // Ми замінюємо змінні на їх числові значення ДО передачі в солвер.
-            // Це спрощує задачу і уникає конфліктів імен системних змінних (напр. I, E, Pi).
+            // 2. САНІТИЗАЦІЯ:
+            // Додаємо префікс "v_" до всіх слів, які виглядають як змінні.
+            // Це перетворить "I = U / R" на "v_I = v_U / v_R".
+            // Тепер "v_I" для Symja - це просто змінна, а не уявна одиниця.
+            String safeEq = cleanEq.replaceAll("\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b", "v_$1");
+            String safeTarget = "v_" + cleanTarget;
+
+            // Замінюємо "=" на "==" для Symja
+            safeEq = safeEq.replace("=", "==");
+
+            // 3. Підставляємо відомі значення у "безпечне" рівняння
             for (Map.Entry<String, Double> entry : inputs.entrySet()) {
-                String varName = entry.getKey();
+                // Очищаємо ключ від # (якщо є) і додаємо префікс v_
+                String originalKey = entry.getKey().replace("#", "");
+                String safeKey = "v_" + originalKey;
+
+                // Форматуємо число (String.valueOf може дати науковий формат 1.0E-5, Symja це розуміє)
                 String value = String.valueOf(entry.getValue());
 
-                // Використовуємо регулярний вираз з межею слова (\b), щоб
-                // заміна "R" не замінила букву R у змінній "R1" або "Rate".
-                preparedEq = preparedEq.replaceAll("\\b" + varName + "\\b", value);
+                // Замінюємо конкретну змінну на число
+                safeEq = safeEq.replaceAll("\\b" + safeKey + "\\b", value);
             }
 
-            // На цьому етапі preparedEq може виглядати як "2.0 == 12.0 / R"
+            // На цьому етапі safeEq виглядає як: "v_I == 12.0 / 220.0" (якщо шукаємо I)
+            // Або "2.0 == 12.0 / v_R" (якщо шукаємо R)
 
-            // 3. Формуємо команду для Symja:
-            // Solve(рівняння, змінна) - знайти корені
-            // N(...) - перетворити результат у число (float), а не дріб (12/5)
-            String command = "N(Solve(" + preparedEq + ", " + targetVar + "))";
+            // 4. Формуємо команду: N(Solve(рівняння, змінна))
+            String command = "N(Solve(" + safeEq + ", " + safeTarget + "))";
 
-            // 4. Виконання
-            // evaluator не є thread-safe за замовчуванням у складних сценаріях,
-            // але для простих рівнянь і локального використання evaluator.eval() працює стабільно.
-            // При високому навантаженні варто використовувати ThreadLocal<ExprEvaluator>.
+            // 5. Виконання (synchronized, бо evaluator не thread-safe)
             IExpr result;
             synchronized (evaluator) {
+                // Очищаємо змінні перед розрахунком (Clear), про всяк випадок
+                evaluator.eval("Clear(" + safeTarget + ")");
                 result = evaluator.eval(command);
             }
 
-            // 5. Парсинг результату
-            // Symja повертає результат у форматі списку правил заміни: {{R->6.0}}
+            // 6. Парсинг результату
             return extractPositiveRoot(result.toString());
 
         } catch (Exception e) {
-            System.err.println("Symja error solving equation: " + equation + ". Error: " + e.getMessage());
+            System.err.println("Symja error solving equation [" + equation + "]: " + e.getMessage());
             return null;
         }
     }
 
-    /**
-     * Витягує число з відповіді Symja.
-     * Відповідь приходить у форматі: {{Var->Value}} або {{Var->Value1}, {Var->Value2}}
-     */
     private Double extractPositiveRoot(String symjaResponse) {
-        // Якщо розв'язків немає (порожній список "{}")
-        if (symjaResponse.equals("{}")) return null;
+        if (symjaResponse.equals("{}") || symjaResponse.equals("List()")) return null;
 
-        // Регулярка шукає числа після стрілочки "->".
-        // Враховує від'ємні числа та десяткові дроби.
-        Pattern pattern = Pattern.compile("->\\s*(-?\\d+(\\.\\d+)?)");
+        // Покращена регулярка:
+        // -> шукає стрілочку
+        // \s* можливі пробіли
+        // (-?\d+(\.\d*)?) шукає число (можливий мінус, ціла частина, необов'язкова крапка і дробна частина)
+        // Дозволяє числа виду: 6, 6.0, 0.5, -12.
+        Pattern pattern = Pattern.compile("->\\s*(-?\\d+(\\.\\d*)?)");
         Matcher matcher = pattern.matcher(symjaResponse);
 
         Double bestResult = null;
@@ -85,20 +85,112 @@ public class SymbolicSolverService {
             try {
                 double val = Double.parseDouble(matcher.group(1));
 
-                // ЕВРИСТИКА: Для інженерних задач (опір, напруга, ємність)
-                // ми зазвичай шукаємо додатне дійсне число.
+                // Пріоритет: додатні числа (фізичні величини зазвичай > 0)
                 if (val >= 0) {
                     return val;
                 }
-
-                // Якщо поки не знайшли додатного, запам'ятаємо хоча б від'ємне
+                // Якщо знайшли тільки від'ємне - запам'ятаємо (раптом це температура чи напруга зміщення)
                 if (bestResult == null) {
                     bestResult = val;
                 }
             } catch (NumberFormatException e) {
-                // ігноруємо помилки парсингу
+                // ігноруємо
             }
         }
         return bestResult;
     }
 }
+
+//public class SymbolicSolverService {
+//
+//    private final ExprEvaluator evaluator = new ExprEvaluator();
+//
+//    /**
+//     * Вирішує рівняння відносно заданої змінної.
+//     *
+//     * @param equation  Рівняння, наприклад "#I = #U / #R"
+//     * @param inputs    Відомі значення, наприклад {"U": 12.0, "I": 2.0}
+//     * @param targetVar Змінна, яку треба знайти, наприклад "R"
+//     * @return Знайдене значення (Double) або null, якщо розв'язку немає
+//     */
+//    public Double solve(String equation, Map<String, Double> inputs, String targetVar) {
+//        try {
+//            // 1. Очистка синтаксису:
+//            // - Видаляємо SpEL-маркери "#"
+//            // - Замінюємо "=" на "==" (синтаксис рівності в Symja/Mathematica)
+//            String preparedEq = equation.replace("#", "").replace("=", "==");
+//
+//            // 2. Підстановка відомих значень у стрічку рівняння
+//            // Ми замінюємо змінні на їх числові значення ДО передачі в солвер.
+//            // Це спрощує задачу і уникає конфліктів імен системних змінних (напр. I, E, Pi).
+//            for (Map.Entry<String, Double> entry : inputs.entrySet()) {
+//                String varName = entry.getKey();
+//                String value = String.valueOf(entry.getValue());
+//
+//                // Використовуємо регулярний вираз з межею слова (\b), щоб
+//                // заміна "R" не замінила букву R у змінній "R1" або "Rate".
+//                preparedEq = preparedEq.replaceAll("\\b" + varName + "\\b", value);
+//            }
+//
+//            // На цьому етапі preparedEq може виглядати як "2.0 == 12.0 / R"
+//
+//            // 3. Формуємо команду для Symja:
+//            // Solve(рівняння, змінна) - знайти корені
+//            // N(...) - перетворити результат у число (float), а не дріб (12/5)
+//            String command = "N(Solve(" + preparedEq + ", " + targetVar + "))";
+//
+//            // 4. Виконання
+//            // evaluator не є thread-safe за замовчуванням у складних сценаріях,
+//            // але для простих рівнянь і локального використання evaluator.eval() працює стабільно.
+//            // При високому навантаженні варто використовувати ThreadLocal<ExprEvaluator>.
+//            IExpr result;
+//            synchronized (evaluator) {
+//                result = evaluator.eval(command);
+//            }
+//
+//            // 5. Парсинг результату
+//            // Symja повертає результат у форматі списку правил заміни: {{R->6.0}}
+//            return extractPositiveRoot(result.toString());
+//
+//        } catch (Exception e) {
+//            System.err.println("Symja error solving equation: " + equation + ". Error: " + e.getMessage());
+//            return null;
+//        }
+//    }
+//
+//    /**
+//     * Витягує число з відповіді Symja.
+//     * Відповідь приходить у форматі: {{Var->Value}} або {{Var->Value1}, {Var->Value2}}
+//     */
+//    private Double extractPositiveRoot(String symjaResponse) {
+//        // Якщо розв'язків немає (порожній список "{}")
+//        if (symjaResponse.equals("{}")) return null;
+//
+//        // Регулярка шукає числа після стрілочки "->".
+//        // Враховує від'ємні числа та десяткові дроби.
+//        Pattern pattern = Pattern.compile("->\\s*(-?\\d+(\\.\\d+)?)");
+//        Matcher matcher = pattern.matcher(symjaResponse);
+//
+//        Double bestResult = null;
+//
+//        while (matcher.find()) {
+//            try {
+//                double val = Double.parseDouble(matcher.group(1));
+//
+//                // ЕВРИСТИКА: Для інженерних задач (опір, напруга, ємність)
+//                // ми зазвичай шукаємо додатне дійсне число.
+//                if (val >= 0) {
+//                    return val;
+//                }
+//
+//                // Якщо поки не знайшли додатного, запам'ятаємо хоча б від'ємне
+//                if (bestResult == null) {
+//                    bestResult = val;
+//                }
+//            } catch (NumberFormatException e) {
+//                // ігноруємо помилки парсингу
+//            }
+//        }
+//        return bestResult;
+//    }
+//}
