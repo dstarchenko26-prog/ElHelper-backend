@@ -133,50 +133,52 @@ public class CalculatorService {
         calculationRepository.delete(calc);
     }
 
-//    private Map<String, Double> runAutoSolver(Formula formula, Map<String, Double> inputs) {
-//        // Контекст зберігає всі відомі на даний момент змінні (вхідні + обчислені)
-//        Map<String, Double> context = new HashMap<>(inputs);
-//
-//        if (formula.getScripts() == null || formula.getScripts().isEmpty()) {
-//            return context;
-//        }
-//
-//        // Список усіх скриптів (рівнянь) формули
-//        List<Formula.FormulaScript> scripts = formula.getScripts();
-//
-//        boolean progress; // Прапорець: чи вдалося нам щось знайти в цьому проході?
-//        int maxPasses = 10; // Запобіжник від нескінченного циклу
-//
-//        do {
-//            progress = false;
-//
-//            for (Formula.FormulaScript script : scripts) {
-//                String equation = script.getExpression();
-//
-//                // Нормалізація рівняння (якщо старий формат без "=")
-//                if (!equation.contains("=")) {
-//                    equation = "#" + script.getTarget() + " = " + equation;
-//                }
-//
-//                // 1. Знаходимо всі змінні, які використовуються в ЦЬОМУ конкретному рівнянні
-//                // Наприклад, для "P = I * U" це [P, I, U]
-//                List<String> scriptVars = extractVariables(equation);
-//
-//                // 2. Перевіряємо, скількох змінних нам не вистачає саме для цього рівняння
-//                String missingVar = null;
-//                int missingCount = 0;
-//
-//                for (String var : scriptVars) {
-//                    if (!context.containsKey(var)) {
-//                        missingVar = var;
-//                        missingCount++;
-//                    }
-//                }
-//
-//                // 3. Якщо не вистачає рівно однієї змінної -> ми можемо її знайти!
-//                if (missingCount == 1) {
-//                    try {
-//
+    private Map<String, Double> runAutoSolver(Formula formula, Map<String, Double> inputs) {
+        // Контекст зберігає всі відомі на даний момент змінні (вхідні + обчислені)
+        Map<String, Double> context = new HashMap<>(inputs);
+
+        if (formula.getScripts() == null || formula.getScripts().isEmpty()) {
+            return context;
+        }
+
+        // Список усіх скриптів (рівнянь) формули
+        List<Formula.FormulaScript> scripts = formula.getScripts();
+
+        boolean progress; // Прапорець: чи вдалося нам щось знайти в цьому проході?
+        int maxPasses = 10; // Запобіжник від нескінченного циклу
+
+        do {
+            progress = false;
+
+            for (Formula.FormulaScript script : scripts) {
+                String equation = script.getExpression();
+
+                // Нормалізація рівняння (якщо старий формат без "=")
+                if (!equation.contains("=")) {
+                    equation = "#" + script.getTarget() + " = " + equation;
+                }
+
+                // 1. Знаходимо всі змінні, які використовуються в ЦЬОМУ конкретному рівнянні
+                // Наприклад, для "P = I * U" це [P, I, U]
+                List<String> scriptVars = extractVariables(equation);
+
+                // 2. Перевіряємо, скількох змінних нам не вистачає саме для цього рівняння
+                String missingVar = null;
+                int missingCount = 0;
+
+                for (String var : scriptVars) {
+                    if (!context.containsKey(var)) {
+                        missingVar = var;
+                        missingCount++;
+                    }
+                }
+
+                // 3. Якщо не вистачає рівно однієї змінної -> ми можемо її знайти!
+                if (missingCount == 1) {
+                    try {
+
+                        Double solvedValue = symbolicSolver.solve(equation, context, missingVar);
+
 //                        // Створюємо "безпечне" рівняння та контекст для солвера,
 //                        // щоб уникнути конфліктів з зарезервованими іменами (I, E, Pi, Im)
 //                        String safeEquation = equation;
@@ -199,23 +201,23 @@ public class CalculatorService {
 //
 //                        // Викликаємо солвер з БЕЗПЕЧНИМИ даними
 //                        Double solvedValue = symbolicSolver.solve(safeEquation, safeContext, safeMissingVar);
-//
-//
-//                        // Якщо Symja повернула результат, додаємо його в контекст
-//                        if (solvedValue != null && !Double.isNaN(solvedValue) && !Double.isInfinite(solvedValue)) {
-//                            context.put(missingVar, solvedValue);
-//                            progress = true; // Ми дізналися щось нове, треба пройтись по скриптах ще раз
-//                        }
-//                    } catch (Exception e) {
-//                        // Ігноруємо помилку, можливо дані для цього рівняння ще не готові
-//                    }
-//                }
-//            }
-//            maxPasses--;
-//        } while (progress && maxPasses > 0);
-//
-//        return context;
-//    }
+
+
+                        // Якщо Symja повернула результат, додаємо його в контекст
+                        if (solvedValue != null && !Double.isNaN(solvedValue) && !Double.isInfinite(solvedValue)) {
+                            context.put(missingVar, solvedValue);
+                            progress = true; // Ми дізналися щось нове, треба пройтись по скриптах ще раз
+                        }
+                    } catch (Exception e) {
+                        // Ігноруємо помилку, можливо дані для цього рівняння ще не готові
+                    }
+                }
+            }
+            maxPasses--;
+        } while (progress && maxPasses > 0);
+
+        return context;
+    }
 
 //    private Map<String, Double> runAutoSolver(Formula formula, Map<String, Double> inputs) {
 //        Map<String, Double> context = new HashMap<>(inputs);
@@ -299,112 +301,112 @@ public class CalculatorService {
 //        return context;
 //    }
 
-    private Map<String, Double> runAutoSolver(Formula formula, Map<String, Double> inputs) {
-        Map<String, Double> context = new HashMap<>(inputs);
-
-        if (formula.getScripts() == null || formula.getScripts().isEmpty()) {
-            return context;
-        }
-
-        List<Formula.FormulaScript> scripts = formula.getScripts();
-        boolean progress;
-        int maxPasses = 10;
-
-        do {
-            progress = false;
-
-            for (Formula.FormulaScript script : scripts) {
-                // 1. Очищаємо рівняння від усіх # на старті
-                // Було: "#U = #I * #R" -> Стало: "U = I * R"
-                String originalEquation = script.getExpression().replace("#", "");
-
-                // Нормалізація (додаємо цільову змінну, якщо її немає)
-                if (!originalEquation.contains("=")) {
-                    String target = script.getTarget().replace("#", "");
-                    originalEquation = target + " = " + originalEquation;
-                }
-
-                // Отримуємо змінні (припускаємо, що метод повертає список типу ["U", "I", "R"] або ["#U", ...])
-                List<String> scriptVars = extractVariables(script.getExpression());
-
-                // Створюємо список "чистих" назв змінних
-                List<String> cleanVars = new ArrayList<>();
-                for (String v : scriptVars) cleanVars.add(v.replace("#", ""));
-
-                // Сортуємо за довжиною (від довгих до коротких), щоб уникнути заміни частини слова
-                // Наприклад, щоб не замінити "I" всередині "I_max"
-                cleanVars.sort((s1, s2) -> s2.length() - s1.length());
-
-                // Рахуємо невідомі
-                String missingVar = null;
-                int missingCount = 0;
-
-                for (String var : cleanVars) {
-                    // Перевіряємо наявність у контексті (шукаємо і "var", і "#var")
-                    boolean exists = context.containsKey(var) || context.containsKey("#" + var);
-                    if (!exists) {
-                        missingVar = var;
-                        missingCount++;
-                    }
-                }
-
-                // Якщо не вистачає рівно однієї змінної
-                if (missingCount == 1) {
-                    try {
-                        // --- ЕТАП САНІТИЗАЦІЇ ---
-                        String safeEquation = originalEquation;
-                        Map<String, Double> safeContext = new HashMap<>();
-                        String safeMissingVar = "var_" + missingVar; // Префікс var_ безпечніший за safe_
-
-                        for (String var : cleanVars) {
-                            String safeName = "var_" + var;
-
-                            // Використовуємо Regex \b (межа слова), щоб замінити точно цю змінну
-                            safeEquation = safeEquation.replaceAll("\\b" + var + "\\b", safeName);
-
-                            // Дістаємо значення з контексту (пробуємо з # і без)
-                            Double val = context.get(var);
-                            if (val == null) val = context.get("#" + var);
-
-                            if (val != null) {
-                                safeContext.put(safeName, val);
-                            }
-                        }
-
-                        // --- ЛОГУВАННЯ (Дивись у консоль!) ---
-                        System.out.println("---- SOLVER DEBUG ----");
-                        System.out.println("Orig: " + originalEquation);
-                        System.out.println("Safe: " + safeEquation);
-                        System.out.println("Solve For: " + safeMissingVar);
-                        System.out.println("Context: " + safeContext);
-
-                        // Виклик солвера
-                        Double solvedValue = symbolicSolver.solve(safeEquation, safeContext, safeMissingVar);
-
-                        System.out.println("Result: " + solvedValue);
-                        System.out.println("----------------------");
-
-                        if (solvedValue != null && !Double.isNaN(solvedValue) && !Double.isInfinite(solvedValue)) {
-                            // Зберігаємо результат (пробуємо зберегти з #, якщо вхідні були з #)
-                            if (inputs.containsKey("#" + cleanVars.get(0))) { // Евристика
-                                context.put("#" + missingVar, solvedValue);
-                            } else {
-                                context.put(missingVar, solvedValue);
-                            }
-
-                            progress = true;
-                        }
-                    } catch (Exception e) {
-                        System.err.println("❌ SOLVER EXCEPTION: " + e.getMessage());
-                        e.printStackTrace();
-                    }
-                }
-            }
-            maxPasses--;
-        } while (progress && maxPasses > 0);
-
-        return context;
-    }
+//    private Map<String, Double> runAutoSolver(Formula formula, Map<String, Double> inputs) {
+//        Map<String, Double> context = new HashMap<>(inputs);
+//
+//        if (formula.getScripts() == null || formula.getScripts().isEmpty()) {
+//            return context;
+//        }
+//
+//        List<Formula.FormulaScript> scripts = formula.getScripts();
+//        boolean progress;
+//        int maxPasses = 10;
+//
+//        do {
+//            progress = false;
+//
+//            for (Formula.FormulaScript script : scripts) {
+//                // 1. Очищаємо рівняння від усіх # на старті
+//                // Було: "#U = #I * #R" -> Стало: "U = I * R"
+//                String originalEquation = script.getExpression().replace("#", "");
+//
+//                // Нормалізація (додаємо цільову змінну, якщо її немає)
+//                if (!originalEquation.contains("=")) {
+//                    String target = script.getTarget().replace("#", "");
+//                    originalEquation = target + " = " + originalEquation;
+//                }
+//
+//                // Отримуємо змінні (припускаємо, що метод повертає список типу ["U", "I", "R"] або ["#U", ...])
+//                List<String> scriptVars = extractVariables(script.getExpression());
+//
+//                // Створюємо список "чистих" назв змінних
+//                List<String> cleanVars = new ArrayList<>();
+//                for (String v : scriptVars) cleanVars.add(v.replace("#", ""));
+//
+//                // Сортуємо за довжиною (від довгих до коротких), щоб уникнути заміни частини слова
+//                // Наприклад, щоб не замінити "I" всередині "I_max"
+//                cleanVars.sort((s1, s2) -> s2.length() - s1.length());
+//
+//                // Рахуємо невідомі
+//                String missingVar = null;
+//                int missingCount = 0;
+//
+//                for (String var : cleanVars) {
+//                    // Перевіряємо наявність у контексті (шукаємо і "var", і "#var")
+//                    boolean exists = context.containsKey(var) || context.containsKey("#" + var);
+//                    if (!exists) {
+//                        missingVar = var;
+//                        missingCount++;
+//                    }
+//                }
+//
+//                // Якщо не вистачає рівно однієї змінної
+//                if (missingCount == 1) {
+//                    try {
+//                        // --- ЕТАП САНІТИЗАЦІЇ ---
+//                        String safeEquation = originalEquation;
+//                        Map<String, Double> safeContext = new HashMap<>();
+//                        String safeMissingVar = "var_" + missingVar; // Префікс var_ безпечніший за safe_
+//
+//                        for (String var : cleanVars) {
+//                            String safeName = "var_" + var;
+//
+//                            // Використовуємо Regex \b (межа слова), щоб замінити точно цю змінну
+//                            safeEquation = safeEquation.replaceAll("\\b" + var + "\\b", safeName);
+//
+//                            // Дістаємо значення з контексту (пробуємо з # і без)
+//                            Double val = context.get(var);
+//                            if (val == null) val = context.get("#" + var);
+//
+//                            if (val != null) {
+//                                safeContext.put(safeName, val);
+//                            }
+//                        }
+//
+//                        // --- ЛОГУВАННЯ (Дивись у консоль!) ---
+//                        System.out.println("---- SOLVER DEBUG ----");
+//                        System.out.println("Orig: " + originalEquation);
+//                        System.out.println("Safe: " + safeEquation);
+//                        System.out.println("Solve For: " + safeMissingVar);
+//                        System.out.println("Context: " + safeContext);
+//
+//                        // Виклик солвера
+//                        Double solvedValue = symbolicSolver.solve(safeEquation, safeContext, safeMissingVar);
+//
+//                        System.out.println("Result: " + solvedValue);
+//                        System.out.println("----------------------");
+//
+//                        if (solvedValue != null && !Double.isNaN(solvedValue) && !Double.isInfinite(solvedValue)) {
+//                            // Зберігаємо результат (пробуємо зберегти з #, якщо вхідні були з #)
+//                            if (inputs.containsKey("#" + cleanVars.get(0))) { // Евристика
+//                                context.put("#" + missingVar, solvedValue);
+//                            } else {
+//                                context.put(missingVar, solvedValue);
+//                            }
+//
+//                            progress = true;
+//                        }
+//                    } catch (Exception e) {
+//                        System.err.println("❌ SOLVER EXCEPTION: " + e.getMessage());
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//            maxPasses--;
+//        } while (progress && maxPasses > 0);
+//
+//        return context;
+//    }
 
 
     private List<String> extractVariables(String equation) {
