@@ -27,7 +27,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final JwtService jwtService;
     private final UserRepo userRepo;
 
-    @Value("${app.front-url}")
+    @Value("${app.host-url}")
     private String URL;
 
     @Override
@@ -64,7 +64,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
         String token = jwtService.generateToken(user);
 
-        String targetUrl = UriComponentsBuilder.fromUriString(URL + "/auth/oauth2")
+        String targetUrl = UriComponentsBuilder.fromUriString(URL + "/ElHelperF/")
                 .queryParam("token", token)
                 .build().toUriString();
 
