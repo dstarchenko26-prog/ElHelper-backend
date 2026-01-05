@@ -176,7 +176,30 @@ public class CalculatorService {
                 // 3. Якщо не вистачає рівно однієї змінної -> ми можемо її знайти!
                 if (missingCount == 1) {
                     try {
-                        Double solvedValue = symbolicSolver.solve(equation, context, missingVar);
+
+                        // Створюємо "безпечне" рівняння та контекст для солвера,
+                        // щоб уникнути конфліктів з зарезервованими іменами (I, E, Pi, Im)
+                        String safeEquation = equation;
+                        Map<String, Double> safeContext = new HashMap<>();
+                        String safeMissingVar = "safe_" + missingVar;
+
+                        // Проходимо по всіх змінних цього рівняння і підміняємо їх
+                        for (String var : scriptVars) {
+                            String safeName = "safe_" + var;
+
+                            // Замінюємо назву змінної в рівнянні (використовуємо \b для меж слова)
+                            // Це перетворить "U = I * R" на "safe_U = safe_I * safe_R"
+                            safeEquation = safeEquation.replaceAll("\\b" + var + "\\b", safeName);
+
+                            // Якщо змінна відома (є в context), додаємо її значення в safeContext
+                            if (context.containsKey(var)) {
+                                safeContext.put(safeName, context.get(var));
+                            }
+                        }
+
+                        // Викликаємо солвер з БЕЗПЕЧНИМИ даними
+                        Double solvedValue = symbolicSolver.solve(safeEquation, safeContext, safeMissingVar);
+
 
                         // Якщо Symja повернула результат, додаємо його в контекст
                         if (solvedValue != null && !Double.isNaN(solvedValue) && !Double.isInfinite(solvedValue)) {

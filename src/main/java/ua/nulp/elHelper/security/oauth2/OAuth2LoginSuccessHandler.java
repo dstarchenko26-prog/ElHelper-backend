@@ -47,7 +47,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             user = userOptional.get();
             user.setProvider(AuthProvider.GOOGLE);
             user.setProviderId(providerId);
-            user.setAvatarUrl(avatarUrl);
+            //user.setAvatarUrl(avatarUrl);
             userRepo.save(user);
         } else {
             user = new User();
