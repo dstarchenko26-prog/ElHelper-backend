@@ -133,19 +133,100 @@ public class CalculatorService {
         calculationRepository.delete(calc);
     }
 
+//    private Map<String, Double> runAutoSolver(Formula formula, Map<String, Double> inputs) {
+//        // Контекст зберігає всі відомі на даний момент змінні (вхідні + обчислені)
+//        Map<String, Double> context = new HashMap<>(inputs);
+//
+//        if (formula.getScripts() == null || formula.getScripts().isEmpty()) {
+//            return context;
+//        }
+//
+//        // Список усіх скриптів (рівнянь) формули
+//        List<Formula.FormulaScript> scripts = formula.getScripts();
+//
+//        boolean progress; // Прапорець: чи вдалося нам щось знайти в цьому проході?
+//        int maxPasses = 10; // Запобіжник від нескінченного циклу
+//
+//        do {
+//            progress = false;
+//
+//            for (Formula.FormulaScript script : scripts) {
+//                String equation = script.getExpression();
+//
+//                // Нормалізація рівняння (якщо старий формат без "=")
+//                if (!equation.contains("=")) {
+//                    equation = "#" + script.getTarget() + " = " + equation;
+//                }
+//
+//                // 1. Знаходимо всі змінні, які використовуються в ЦЬОМУ конкретному рівнянні
+//                // Наприклад, для "P = I * U" це [P, I, U]
+//                List<String> scriptVars = extractVariables(equation);
+//
+//                // 2. Перевіряємо, скількох змінних нам не вистачає саме для цього рівняння
+//                String missingVar = null;
+//                int missingCount = 0;
+//
+//                for (String var : scriptVars) {
+//                    if (!context.containsKey(var)) {
+//                        missingVar = var;
+//                        missingCount++;
+//                    }
+//                }
+//
+//                // 3. Якщо не вистачає рівно однієї змінної -> ми можемо її знайти!
+//                if (missingCount == 1) {
+//                    try {
+//
+//                        // Створюємо "безпечне" рівняння та контекст для солвера,
+//                        // щоб уникнути конфліктів з зарезервованими іменами (I, E, Pi, Im)
+//                        String safeEquation = equation;
+//                        Map<String, Double> safeContext = new HashMap<>();
+//                        String safeMissingVar = "safe_" + missingVar;
+//
+//                        // Проходимо по всіх змінних цього рівняння і підміняємо їх
+//                        for (String var : scriptVars) {
+//                            String safeName = "safe_" + var;
+//
+//                            // Замінюємо назву змінної в рівнянні (використовуємо \b для меж слова)
+//                            // Це перетворить "U = I * R" на "safe_U = safe_I * safe_R"
+//                            safeEquation = safeEquation.replaceAll("\\b" + var + "\\b", safeName);
+//
+//                            // Якщо змінна відома (є в context), додаємо її значення в safeContext
+//                            if (context.containsKey(var)) {
+//                                safeContext.put(safeName, context.get(var));
+//                            }
+//                        }
+//
+//                        // Викликаємо солвер з БЕЗПЕЧНИМИ даними
+//                        Double solvedValue = symbolicSolver.solve(safeEquation, safeContext, safeMissingVar);
+//
+//
+//                        // Якщо Symja повернула результат, додаємо його в контекст
+//                        if (solvedValue != null && !Double.isNaN(solvedValue) && !Double.isInfinite(solvedValue)) {
+//                            context.put(missingVar, solvedValue);
+//                            progress = true; // Ми дізналися щось нове, треба пройтись по скриптах ще раз
+//                        }
+//                    } catch (Exception e) {
+//                        // Ігноруємо помилку, можливо дані для цього рівняння ще не готові
+//                    }
+//                }
+//            }
+//            maxPasses--;
+//        } while (progress && maxPasses > 0);
+//
+//        return context;
+//    }
+
     private Map<String, Double> runAutoSolver(Formula formula, Map<String, Double> inputs) {
-        // Контекст зберігає всі відомі на даний момент змінні (вхідні + обчислені)
         Map<String, Double> context = new HashMap<>(inputs);
 
         if (formula.getScripts() == null || formula.getScripts().isEmpty()) {
             return context;
         }
 
-        // Список усіх скриптів (рівнянь) формули
         List<Formula.FormulaScript> scripts = formula.getScripts();
-
-        boolean progress; // Прапорець: чи вдалося нам щось знайти в цьому проході?
-        int maxPasses = 10; // Запобіжник від нескінченного циклу
+        boolean progress;
+        int maxPasses = 10;
 
         do {
             progress = false;
@@ -153,61 +234,62 @@ public class CalculatorService {
             for (Formula.FormulaScript script : scripts) {
                 String equation = script.getExpression();
 
-                // Нормалізація рівняння (якщо старий формат без "=")
+                // Нормалізація
                 if (!equation.contains("=")) {
                     equation = "#" + script.getTarget() + " = " + equation;
                 }
 
-                // 1. Знаходимо всі змінні, які використовуються в ЦЬОМУ конкретному рівнянні
-                // Наприклад, для "P = I * U" це [P, I, U]
                 List<String> scriptVars = extractVariables(equation);
 
-                // 2. Перевіряємо, скількох змінних нам не вистачає саме для цього рівняння
                 String missingVar = null;
                 int missingCount = 0;
 
                 for (String var : scriptVars) {
+                    // Важливо: переконайся, що var тут чистий (без #), якщо в context ключі без #
                     if (!context.containsKey(var)) {
                         missingVar = var;
                         missingCount++;
                     }
                 }
 
-                // 3. Якщо не вистачає рівно однієї змінної -> ми можемо її знайти!
                 if (missingCount == 1) {
                     try {
+                        // 1. 🔥 ФІКС: Видаляємо всі решітки з самого рівняння, щоб отримати чисту математику
+                        // Було: "#U = #I * #R" -> Стало: "U = I * R"
+                        String safeEquation = equation.replace("#", "");
 
-                        // Створюємо "безпечне" рівняння та контекст для солвера,
-                        // щоб уникнути конфліктів з зарезервованими іменами (I, E, Pi, Im)
-                        String safeEquation = equation;
                         Map<String, Double> safeContext = new HashMap<>();
-                        String safeMissingVar = "safe_" + missingVar;
 
-                        // Проходимо по всіх змінних цього рівняння і підміняємо їх
+                        // Очищаємо і шукану змінну від можливих решіток
+                        String cleanMissingVar = missingVar.replace("#", "");
+                        String safeMissingVar = "safe_" + cleanMissingVar;
+
                         for (String var : scriptVars) {
-                            String safeName = "safe_" + var;
+                            String cleanVarName = var.replace("#", "");
+                            String safeName = "safe_" + cleanVarName;
 
-                            // Замінюємо назву змінної в рівнянні (використовуємо \b для меж слова)
-                            // Це перетворить "U = I * R" на "safe_U = safe_I * safe_R"
-                            safeEquation = safeEquation.replaceAll("\\b" + var + "\\b", safeName);
+                            // 2. Замінюємо чисту змінну на безпечну
+                            // "U = I * R" -> "safe_U = safe_I * safe_R"
+                            safeEquation = safeEquation.replaceAll("\\b" + cleanVarName + "\\b", safeName);
 
-                            // Якщо змінна відома (є в context), додаємо її значення в safeContext
+                            // 3. Заповнюємо контекст
                             if (context.containsKey(var)) {
                                 safeContext.put(safeName, context.get(var));
                             }
                         }
 
-                        // Викликаємо солвер з БЕЗПЕЧНИМИ даними
+                        // System.out.println("Solving: " + safeEquation + " for " + safeMissingVar); // Для дебагу
+
                         Double solvedValue = symbolicSolver.solve(safeEquation, safeContext, safeMissingVar);
 
-
-                        // Якщо Symja повернула результат, додаємо його в контекст
                         if (solvedValue != null && !Double.isNaN(solvedValue) && !Double.isInfinite(solvedValue)) {
                             context.put(missingVar, solvedValue);
-                            progress = true; // Ми дізналися щось нове, треба пройтись по скриптах ще раз
+                            progress = true;
                         }
                     } catch (Exception e) {
-                        // Ігноруємо помилку, можливо дані для цього рівняння ще не готові
+                        // 🔥 ФІКС: Виведи помилку в консоль, щоб бачити, що пішло не так
+                        System.err.println("Solver Error for equation [" + equation + "]: " + e.getMessage());
+                        e.printStackTrace();
                     }
                 }
             }
