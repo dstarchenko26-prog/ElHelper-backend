@@ -5,6 +5,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import ua.nulp.elHelper.entity.Enums.UserRole;
 import ua.nulp.elHelper.repository.*;
 import ua.nulp.elHelper.service.dto.user.*;
 import ua.nulp.elHelper.entity.user.AdminRequest;
@@ -154,6 +155,9 @@ public class UserService {
             adminRequest.setAdminComment(dto.getComment());
             adminRequest.setStatus(RequestStatus.REJECTED);
         } else {
+            var user = adminRequest.getUser();
+            user.setRole(UserRole.ADMIN);
+            userRepository.save(user);
             adminRequest.setStatus(RequestStatus.APPROVED);
         }
         adminRequestRepository.save(adminRequest);
