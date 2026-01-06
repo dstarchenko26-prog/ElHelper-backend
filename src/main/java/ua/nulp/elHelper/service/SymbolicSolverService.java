@@ -18,27 +18,16 @@ public class SymbolicSolverService {
             // Замінюємо "=" на "==", бо Symja розуміє тільки подвійне дорівнює
             String commandEq = equation.replace("=", "==");
 
-            // 2. Підставляємо відомі значення прямо в рядок
-            // (Ми припускаємо, що equation ВЖЕ прийшов із безпечними іменами змінних типу var_I)
             for (Map.Entry<String, Double> entry : inputs.entrySet()) {
                 String varName = entry.getKey();
-                //String val = String.valueOf(entry.getValue());
                 String val = String.valueOf(entry.getValue())
                         .replace("E", "*^");
 
-                // Використовуємо replace, а не regex, щоб було швидше і надійніше
-                // Але перевіряємо межі слова, щоб var_R не замінило шматок var_R1
-                // Оскільки ми контролюємо імена (вони починаються на var_), replaceAll з \b безпечний.
                 commandEq = commandEq.replaceAll("\\b" + varName + "\\b", val);
             }
 
             // 3. Формуємо команду
-            // Цифра 20 означає: "хочу 20 значущих цифр у відповіді"
             String command = "N(Solve(Rationalize(" + commandEq + "), " + targetVar + "), 50)";
-            //String command = "NSolve(" + commandEq + ", " + targetVar + ", 30)";
-            //String command = "N(Solve(" + commandEq + ", " + targetVar + "), 20)";
-
-            //String command = "N(Solve(" + commandEq + ", " + targetVar + "))";
 
             // LOG для відладки (буде в консолі Render)
             System.out.println("Symja Command: " + command);
