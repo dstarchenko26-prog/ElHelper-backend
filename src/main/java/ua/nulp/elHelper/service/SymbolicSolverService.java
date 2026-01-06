@@ -33,7 +33,10 @@ public class SymbolicSolverService {
             }
 
             // 3. Формуємо команду
-            String command = "N(Solve(" + commandEq + ", " + targetVar + "))";
+            // Цифра 20 означає: "хочу 20 значущих цифр у відповіді"
+            String command = "N(Solve(" + commandEq + ", " + targetVar + "), 20)";
+
+            //String command = "N(Solve(" + commandEq + ", " + targetVar + "))";
 
             // LOG для відладки (буде в консолі Render)
             System.out.println("Symja Command: " + command);
