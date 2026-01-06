@@ -57,9 +57,10 @@ public class SymbolicSolverService {
     private Double extractPositiveRoot(String symjaResponse) {
         if (symjaResponse == null || symjaResponse.equals("{}") || symjaResponse.equals("List()")) return null;
 
-        // Шукаємо число після "->". Підтримує цілі, дробові, від'ємні, науковий формат (1.2*^5)
+        String cleanResponse = symjaResponse.replace("*^", "E");
+
         Pattern pattern = Pattern.compile("->\\s*(-?\\d+(\\.\\d*)?([eE][+-]?\\d+)?)");
-        Matcher matcher = pattern.matcher(symjaResponse);
+        Matcher matcher = pattern.matcher(cleanResponse);
 
         Double bestResult = null;
 
