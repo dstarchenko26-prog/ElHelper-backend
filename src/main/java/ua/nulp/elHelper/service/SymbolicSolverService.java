@@ -22,7 +22,9 @@ public class SymbolicSolverService {
             // (Ми припускаємо, що equation ВЖЕ прийшов із безпечними іменами змінних типу var_I)
             for (Map.Entry<String, Double> entry : inputs.entrySet()) {
                 String varName = entry.getKey();
-                String val = String.valueOf(entry.getValue());
+                //String val = String.valueOf(entry.getValue());
+                String val = String.valueOf(entry.getValue())
+                        .replace("E", "*^");
 
                 // Використовуємо replace, а не regex, щоб було швидше і надійніше
                 // Але перевіряємо межі слова, щоб var_R не замінило шматок var_R1
