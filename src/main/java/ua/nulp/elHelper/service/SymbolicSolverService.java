@@ -34,7 +34,8 @@ public class SymbolicSolverService {
 
             // 3. Формуємо команду
             // Цифра 20 означає: "хочу 20 значущих цифр у відповіді"
-            String command = "N(Solve(" + commandEq + ", " + targetVar + "), 20)";
+            String command = "NSolve(" + commandEq + ", " + targetVar + ", 30)";
+            //String command = "N(Solve(" + commandEq + ", " + targetVar + "), 20)";
 
             //String command = "N(Solve(" + commandEq + ", " + targetVar + "))";
 
