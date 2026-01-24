@@ -14,8 +14,8 @@
 
 - **Core:** Java 21, Spring Boot 4.x (Web, Data JPA, Security, Validation, Mail)
 - **Database:** PostgreSQL
-- **Security:** JWT (Access/Refresh tokens), Google OAuth2
-- **Email Service:** SMTP (Brevo / Gmail) with async support
+- **Security:** JWT, Google OAuth2
+- **Email Service:** SMTP (Brevo) with async support
 - **Tools:** Maven, Lombok, Docker
 
 ---
