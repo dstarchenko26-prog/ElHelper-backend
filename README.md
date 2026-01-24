@@ -50,6 +50,8 @@ The frontend interacts with the complex computational core through `/api/calcula
 * **Symbolic Math Processing:** Using Symja under the hood of the backend to process solution steps.
 * **BOM Generation:** Integration with the Bill of Materials generation service. The user can download the generated **CSV file** with a list of all project components with a single click.
 
+---
+
 ## 🔌 API Endpoints
 
 ### 🔐 Auth Controller (`/api/auth`)
